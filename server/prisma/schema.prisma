@@ -1,0 +1,64 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// The Tenant (Shopify Store)
+model Tenant {
+  id             String   @id @default(uuid())
+  shopDomain     String   @unique // e.g., "my-store.myshopify.com"
+  accessToken    String   // Encrypted in production, plain for MVP
+  createdAt      DateTime @default(now())
+  
+  // Relations
+  orders         Order[]
+  customers      Customer[]
+  products       Product[]
+}
+
+// Data: Orders
+model Order {
+  id              String   @id @default(uuid())
+  shopifyOrderId  String   @unique // The ID from Shopify
+  orderNumber     Int
+  totalPrice      Float
+  currency        String
+  createdAt       DateTime // When order was created in Shopify
+  
+  tenantId        String
+  tenant          Tenant   @relation(fields: [tenantId], references: [id])
+
+  customerId      String?
+  customer        Customer? @relation(fields: [customerId], references: [id])
+}
+
+// Data: Customers
+model Customer {
+  id                String   @id @default(uuid())
+  shopifyCustomerId String   @unique
+  email             String?
+  firstName         String?
+  lastName          String?
+  totalSpent        Float    @default(0.0)
+  ordersCount       Int      @default(0)
+  
+  tenantId          String
+  tenant            Tenant   @relation(fields: [tenantId], references: [id])
+  
+  orders            Order[]
+}
+
+// Data: Products
+model Product {
+  id              String   @id @default(uuid())
+  shopifyProductId String   @unique
+  title           String
+  vendor          String?
+  
+  tenantId        String
+  tenant          Tenant   @relation(fields: [tenantId], references: [id])
+}
